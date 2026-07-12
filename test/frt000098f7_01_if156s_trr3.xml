@@ -1,0 +1,406 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+
+<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1N00.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<?xml-model href="https://pds.nasa.gov/pds4/disp/v1/PDS4_DISP_1N00_1510.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<?xml-model href="https://pds.nasa.gov/pds4/img/v1/PDS4_IMG_1N00_1910.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<?xml-model href="https://pds.nasa.gov/pds4/proc/v1/PDS4_PROC_1N00_1300.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<?xml-model href="https://pds.nasa.gov/pds4/geom/v1/PDS4_GEOM_1N00_1980.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<?xml-model href="https://pds.nasa.gov/pds4/mission/mro/v1/PDS4_MRO_1N00_1400.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+
+<Product_Observational xmlns="http://pds.nasa.gov/pds4/pds/v1" 
+    xmlns:disp="http://pds.nasa.gov/pds4/disp/v1" 
+    xmlns:geom="http://pds.nasa.gov/pds4/geom/v1" 
+    xmlns:img="http://pds.nasa.gov/pds4/img/v1" 
+    xmlns:mro="http://pds.nasa.gov/pds4/mission/mro/v1" 
+    xmlns:proc="http://pds.nasa.gov/pds4/proc/v1" 
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+    xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1       https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_1N00.xsd      http://pds.nasa.gov/pds4/disp/v1       https://pds.nasa.gov/pds4/disp/v1/PDS4_DISP_1N00_1510.xsd      http://pds.nasa.gov/pds4/img/v1       https://pds.nasa.gov/pds4/img/v1/PDS4_IMG_1N00_1910.xsd      http://pds.nasa.gov/pds4/proc/v1       https://pds.nasa.gov/pds4/proc/v1/PDS4_PROC_1N00_1300.xsd     http://pds.nasa.gov/pds4/geom/v1       https://pds.nasa.gov/pds4/geom/v1/PDS4_GEOM_1N00_1980.xsd     http://pds.nasa.gov/pds4/mission/mro/v1    https://pds.nasa.gov/pds4/mission/mro/v1/PDS4_MRO_1N00_1400.xsd     ">
+  <Identification_Area>
+    <logical_identifier>urn:nasa:pds:mro_crism_trdr_2102:data_trdr:frt000098f7_01_if156s_trr3</logical_identifier>
+    <version_id>1.0</version_id>
+    <title>frt000098f7_01_if156s_trr3 TRDR IF</title>
+    <information_model_version>1.23.0.0</information_model_version>
+    <product_class>Product_Observational</product_class>
+    <Alias_List>
+      <Alias>
+        <alternate_id>FRT000098F7_01_IF156S_TRR3</alternate_id>
+        <comment>PDS3 PRODUCT_ID</comment>
+      </Alias>
+    </Alias_List>
+    <Modification_History>
+      <Modification_Detail>
+        <modification_date>2025-02-01</modification_date>
+        <version_id>1.0</version_id>
+        <description>PDS4 conversion.</description>
+      </Modification_Detail>
+    </Modification_History>
+  </Identification_Area>
+  <Observation_Area>
+    <Time_Coordinates>
+      <start_date_time>2008-01-21T06:15:13.896Z</start_date_time>
+      <stop_date_time>2008-01-21T06:15:17.630Z</stop_date_time>
+      <solar_longitude unit="deg">20.607750</solar_longitude>
+    </Time_Coordinates>
+    <Investigation_Area>
+      <name>MARS RECONNAISSANCE ORBITER</name>
+      <type>Mission</type>
+      <Internal_Reference>
+        <lid_reference>urn:nasa:pds:context:investigation:mission.mars_reconnaissance_orbiter</lid_reference>
+        <reference_type>data_to_investigation</reference_type>
+      </Internal_Reference>
+    </Investigation_Area>
+    <Observing_System>
+      <Observing_System_Component>
+        <name>MARS RECONNAISSANCE ORBITER</name>
+        <type>Host</type>
+        <Internal_Reference>
+          <lid_reference>urn:nasa:pds:context:instrument_host:spacecraft.mro</lid_reference>
+          <reference_type>is_instrument_host</reference_type>
+        </Internal_Reference>
+      </Observing_System_Component>
+      <Observing_System_Component>
+        <name>COMPACT RECONNAISSANCE IMAGING SPECTROMETER FOR MARS</name>
+        <type>Instrument</type>
+        <Internal_Reference>
+          <lid_reference>urn:nasa:pds:context:instrument:crism.mro</lid_reference>
+          <reference_type>is_instrument</reference_type>
+        </Internal_Reference>
+      </Observing_System_Component>
+    </Observing_System>
+    <Target_Identification>
+      <name>Mars</name>
+      <type>Planet</type>
+      <Internal_Reference>
+        <lid_reference>urn:nasa:pds:context:target:planet.mars</lid_reference>
+        <reference_type>data_to_target</reference_type>
+      </Internal_Reference>
+    </Target_Identification>
+    <Mission_Area>
+      <mro:MRO_Parameters>
+        <mro:product_type>TRDR</mro:product_type>
+        <mro:product_version_id>3</mro:product_version_id>
+        <mro:spacecraft_clock_start_count>3/0885363333:45336</mro:spacecraft_clock_start_count>
+        <mro:spacecraft_clock_stop_count>3/0885363337:27928</mro:spacecraft_clock_stop_count>
+        <mro:producer_institution_name>Johns Hopkins University Applied Physics Laboratory</mro:producer_institution_name>
+        <mro:CRISM_Parameters>
+          <mro:observation_type>FRT</mro:observation_type>
+          <mro:observation_id>16#000098F7#</mro:observation_id>
+          <mro:observation_number>16#01#</mro:observation_number>
+          <mro:activity_id>IF156</mro:activity_id>
+          <mro:sensor_id>S</mro:sensor_id>
+          <mro:instrument_pointing_mode>DYNAMIC POINTING</mro:instrument_pointing_mode>
+          <mro:scan_mode_id>SHORT</mro:scan_mode_id>
+          <mro:frame_rate unit="frames/s">3.75</mro:frame_rate>
+          <mro:exposure_parameter>184</mro:exposure_parameter>
+          <mro:sampling_mode_id>HYPERSPECTRAL</mro:sampling_mode_id>
+          <mro:wavelength_filter>0</mro:wavelength_filter>
+          <mro:wavelength_file_name>CDR420850327000_WA0300000S_2.IMG</mro:wavelength_file_name>
+          <mro:pixel_proc_file_name>CDR6_2_0835294537_PP_S_0.TAB</mro:pixel_proc_file_name>
+          <mro:inv_lookup_table_file_name>CDR6_1_0000000000_LI_J_0.TAB</mro:inv_lookup_table_file_name>
+          <mro:CRISM_Temperatures>
+            <mro:detector_temperature unit="degC">-58.433</mro:detector_temperature>
+            <mro:optical_bench_temperature unit="degC">-54.342</mro:optical_bench_temperature>
+            <mro:spectrometer_housing_temperature unit="degC">-76.177</mro:spectrometer_housing_temperature>
+            <mro:sphere_temperature unit="degC">-53.967</mro:sphere_temperature>
+            <mro:fpe_temperature unit="degC">1.570</mro:fpe_temperature>
+          </mro:CRISM_Temperatures>
+        </mro:CRISM_Parameters>
+      </mro:MRO_Parameters>
+    </Mission_Area>
+    <Discipline_Area>
+      <img:Imaging>
+        <Local_Internal_Reference>
+          <local_identifier_reference>image_cube</local_identifier_reference>
+          <local_reference_type>imaging_parameters_to_image_object</local_reference_type>
+        </Local_Internal_Reference>
+        <img:Downsampling>
+          <img:processing_venue>Onboard Hardware</img:processing_venue>
+          <img:Pixel_Averaging_Dimensions>
+            <img:height_pixels unit="pixel">10</img:height_pixels>
+            <img:width_pixels unit="pixel">10</img:width_pixels>
+          </img:Pixel_Averaging_Dimensions>
+        </img:Downsampling>
+      </img:Imaging>
+      <disp:Display_Settings>
+        <Local_Internal_Reference>
+          <local_identifier_reference>image_cube</local_identifier_reference>
+          <local_reference_type>display_settings_to_array</local_reference_type>
+        </Local_Internal_Reference>
+        <disp:Display_Direction>
+          <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+          <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+          <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+          <disp:vertical_display_direction>Top to Bottom</disp:vertical_display_direction>
+        </disp:Display_Direction>
+      </disp:Display_Settings>
+      <geom:Geometry>
+        <geom:Geometry_Orbiter>
+          <geom:geometry_start_time_utc>2008-01-21T06:15:13.896Z</geom:geometry_start_time_utc>
+          <geom:geometry_stop_time_utc>2008-01-21T06:15:17.630Z</geom:geometry_stop_time_utc>
+          <geom:Orbiter_Identification>
+            <geom:Geometry_Target_Identification>
+              <geom:name>Mars</geom:name>
+            </geom:Geometry_Target_Identification>
+          </geom:Orbiter_Identification>
+          <geom:Distances>
+            <geom:Distances_Specific>
+              <geom:target_heliocentric_distance unit="km">240224424.416741</geom:target_heliocentric_distance>
+            </geom:Distances_Specific>
+          </geom:Distances>
+        </geom:Geometry_Orbiter>
+      </geom:Geometry>
+      <proc:Processing_Information>
+        <Local_Internal_Reference>
+          <local_identifier_reference>image_cube</local_identifier_reference>
+          <local_reference_type>processing_information_to_data_object</local_reference_type>
+        </Local_Internal_Reference>
+        <proc:Process>
+          <proc:Software>
+            <proc:Software_Program>
+              <proc:name>crism_imagecal</proc:name>
+              <proc:program_version>2.5.3</proc:program_version>
+              <proc:program_stop_date_time>2010-11-17T22:29:22Z</proc:program_stop_date_time>
+            </proc:Software_Program>
+          </proc:Software>
+        </proc:Process>
+      </proc:Processing_Information>
+    </Discipline_Area>
+  </Observation_Area>
+  <Reference_List>
+    <Internal_Reference>
+      <lid_reference>urn:nasa:pds:mro_crism_mtrdr:document:crism_dpsis</lid_reference>
+      <reference_type>data_to_document</reference_type>
+    </Internal_Reference>
+    <Internal_Reference>
+      <lid_reference>urn:nasa:pds:mro_crism_trdr_2102:data_trdr:frt000098f7_01_ra156s_hkp3</lid_reference>
+      <reference_type>data_to_ancillary_data</reference_type>
+    </Internal_Reference>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr410000000000_sh0300001s_4</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr410000000000_ss0300001s_2</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr420850327000_dm0300000s_3</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr420850327000_nu1300001s_3</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr420850327000_sf0300000s_2</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr420850327000_td0300000s_2</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr430885363293_bi1318400s_3</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr430885363293_ub1318400s_3</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr430885363442_bi1318400s_3</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr430885363442_ub1318400s_3</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr430885365051_bp0342500s_3</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr430885365051_bp1318400s_3</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr430885365165_sp0342501s_3</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr6_1_0000000000_as_s_0</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr6_1_0000000000_db_s_0</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr6_1_0000000000_eb_s_0</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr6_1_0000000000_gh_s_1</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr6_1_0000000000_hd_j_1</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr6_1_0000000000_hk_j_1</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr6_1_0000000000_hv_j_1</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr6_1_0000000000_lc_s_1</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr6_1_0000000000_li_j_0</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr6_1_0000000000_vl_s_0</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr6_2_0835294537_pp_s_0</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-4/6-CDR-V1.0:cdr6_3_0885340819_st_j_0</external_source_product_identifier>
+      <reference_type>data_to_calibrated_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+    <Source_Product_External>
+      <external_source_product_identifier>MRO-M-CRISM-2-EDR-V1.0:frt000098f7_01_sc156s_edr0</external_source_product_identifier>
+      <reference_type>data_to_raw_source_product</reference_type>
+      <curating_facility>GEO</curating_facility>
+      <description>A PDS3 CRISM product used as a source to calculate this one.</description>
+    </Source_Product_External>
+  </Reference_List>
+  <File_Area_Observational>
+    <File>
+      <file_name>frt000098f7_01_if156s_trr3.img</file_name>
+      <creation_date_time>2010-11-17T22:29:22Z</creation_date_time>
+    </File>
+    <Array_3D_Image>
+      <name>Spectral Image Cube frt000098f7_01_if156s_trr3</name>
+      <local_identifier>image_cube</local_identifier>
+      <offset unit="byte">0</offset>
+      <axes>3</axes>
+      <axis_index_order>Last Index Fastest</axis_index_order>
+      <description>
+                This Targeted RDR label describes a multiple-band
+                image file containing calibrated spectral data
+                    in units of corrected I over F.
+                </description>
+      <Element_Array>
+        <data_type>IEEE754LSBSingle</data_type>
+      </Element_Array>
+      <Axis_Array>
+        <axis_name>Line</axis_name>
+        <elements>15</elements>
+        <sequence_number>1</sequence_number>
+      </Axis_Array>
+      <Axis_Array>
+        <axis_name>Band</axis_name>
+        <elements>107</elements>
+        <sequence_number>2</sequence_number>
+      </Axis_Array>
+      <Axis_Array>
+        <axis_name>Sample</axis_name>
+        <elements>64</elements>
+        <sequence_number>3</sequence_number>
+      </Axis_Array>
+      <Special_Constants>
+        <missing_constant>65535</missing_constant>
+      </Special_Constants>
+    </Array_3D_Image>
+    <Table_Binary>
+      <local_identifier>detector_row_number</local_identifier>
+      <offset unit="byte">410880</offset>
+      <records>107</records>
+      <description>The detector is subsampled in the spectral direction by selecting specific rows
+             to be downlinked.  This table provides a list of the rows selected for all frames in this
+             multidimensional image cube.
+            </description>
+      <Record_Binary>
+        <fields>1</fields>
+        <groups>0</groups>
+        <record_length unit="byte">2</record_length>
+        <Field_Binary>
+          <name>detector_row_number</name>
+          <field_location unit="byte">1</field_location>
+          <data_type>UnsignedMSB2</data_type>
+          <field_length unit="byte">2</field_length>
+          <description>Detector row number from which the data was taken.</description>
+        </Field_Binary>
+      </Record_Binary>
+    </Table_Binary>
+  </File_Area_Observational>
+  <File_Area_Observational_Supplemental>
+    <File>
+      <file_name>frt000098f7_01_if156s_trr3.lbl</file_name>
+    </File>
+    <Stream_Text>
+      <offset unit="byte">0</offset>
+      <parsing_standard_id>PDS3</parsing_standard_id>
+      <description>PDS3 label</description>
+      <record_delimiter>Carriage-Return Line-Feed</record_delimiter>
+    </Stream_Text>
+  </File_Area_Observational_Supplemental>
+</Product_Observational>

@@ -1,0 +1,36 @@
+STATISTICAL ANALYSIS REPORT
+===========================
+
+--- SNR ---
+Proposed vs HSID-CNN (n=11):
+  Paired t-test: p = 1.3472e-02
+  Wilcoxon:      p = 9.7656e-04
+  Cohen's d:     1.277
+
+Proposed vs N2N4M (n=5):
+  Paired t-test: p = 4.4332e-02
+  Wilcoxon:      p = 6.2500e-02
+  Cohen's d:     -1.794
+
+--- SAM ---
+Proposed vs HSID-CNN (n=11):
+  Paired t-test: p = 9.0858e-01
+  Wilcoxon:      p = 8.9844e-01
+  Cohen's d:     -0.056
+
+Proposed vs N2N4M (n=5):
+  Paired t-test: p = 3.2379e-04
+  Wilcoxon:      p = 6.2500e-02
+  Cohen's d:     -7.258
+
+--- Pearson ---
+Proposed vs HSID-CNN (n=11):
+  Paired t-test: p = 2.3710e-03
+  Wilcoxon:      p = 9.7656e-04
+  Cohen's d:     1.698
+
+Proposed vs N2N4M (n=5):
+  Paired t-test: p = 1.0643e-06
+  Wilcoxon:      p = 6.2500e-02
+  Cohen's d:     31.489
+

@@ -1,0 +1,109 @@
+{
+  "frt000098f7_01_if156l_trr3": {
+    "snr_before": 8.923,
+    "snr_after": 18.246,
+    "snr_delta_pct": 104.5,
+    "sam_rad": 0.0338,
+    "status": "REVIEW",
+    "band_depth_preservation": {
+      "BD2300": {
+        "before": 0.0229,
+        "after": 0.0175,
+        "delta_pct": 23.3,
+        "preserved": false
+      },
+      "OLINDEX3": {
+        "before": 0.2632,
+        "after": 0.2712,
+        "delta_pct": 3.0,
+        "preserved": true
+      }
+    },
+    "adaptive_blend_applied": true,
+    "runtime_seconds": 3.8854598999023438,
+    "peak_memory_mb": 92.296875,
+    "output_path": "/Users/snehasr/Downloads/crism-final-data-main/test/ml_output/./frt000098f7_01_if156l_trr3_S4.npy"
+  },
+  "frt000098f7_01_if156s_trr3": {
+    "snr_before": 20.077,
+    "snr_after": 20.03,
+    "snr_delta_pct": -0.2,
+    "sam_rad": 0.004,
+    "status": "PASS",
+    "band_depth_preservation": {},
+    "runtime_seconds": 1.1242659091949463,
+    "peak_memory_mb": 92.546875,
+    "output_path": "/Users/snehasr/Downloads/crism-final-data-main/test/ml_output/./frt000098f7_01_if156s_trr3_S4.npy"
+  },
+  "frt000098fe_01_if156l_trr3": {
+    "snr_before": 20.148,
+    "snr_after": 33.748,
+    "snr_delta_pct": 67.5,
+    "sam_rad": 0.0445,
+    "status": "REVIEW",
+    "band_depth_preservation": {
+      "BD2300": {
+        "before": -0.0284,
+        "after": -0.0276,
+        "delta_pct": 2.9,
+        "preserved": true
+      },
+      "OLINDEX3": {
+        "before": -0.0129,
+        "after": -0.0085,
+        "delta_pct": 34.4,
+        "preserved": false
+      }
+    },
+    "adaptive_blend_applied": true,
+    "runtime_seconds": 3.6416101455688477,
+    "peak_memory_mb": 124.734375,
+    "output_path": "/Users/snehasr/Downloads/crism-final-data-main/test/ml_output/./frt000098fe_01_if156l_trr3_S4.npy"
+  },
+  "frt000098fe_01_if156s_trr3": {
+    "snr_before": 53.141,
+    "snr_after": 53.141,
+    "snr_delta_pct": 0.0,
+    "sam_rad": 0.0014,
+    "status": "PASS",
+    "band_depth_preservation": {},
+    "runtime_seconds": 0.0057489871978759766,
+    "peak_memory_mb": 124.734375,
+    "output_path": "/Users/snehasr/Downloads/crism-final-data-main/test/ml_output/./frt000098fe_01_if156s_trr3_S4.npy"
+  },
+  "frt00009907_01_if158l_trr3": {
+    "snr_before": 54.63,
+    "snr_after": 133.42,
+    "snr_delta_pct": 144.2,
+    "sam_rad": 0.0486,
+    "status": "PASS",
+    "band_depth_preservation": {
+      "BD2300": {
+        "before": -0.0536,
+        "after": -0.0557,
+        "delta_pct": 3.9,
+        "preserved": true
+      },
+      "OLINDEX3": {
+        "before": 0.294,
+        "after": 0.289,
+        "delta_pct": 1.7,
+        "preserved": true
+      }
+    },
+    "runtime_seconds": 1.0787279605865479,
+    "peak_memory_mb": 124.921875,
+    "output_path": "/Users/snehasr/Downloads/crism-final-data-main/test/ml_output/./frt00009907_01_if158l_trr3_S4.npy"
+  },
+  "frt00009907_01_if158s_trr3": {
+    "snr_before": 178.021,
+    "snr_after": 323.537,
+    "snr_delta_pct": 81.7,
+    "sam_rad": 0.0379,
+    "status": "PASS",
+    "band_depth_preservation": {},
+    "runtime_seconds": 0.6664471626281738,
+    "peak_memory_mb": 125.109375,
+    "output_path": "/Users/snehasr/Downloads/crism-final-data-main/test/ml_output/./frt00009907_01_if158s_trr3_S4.npy"
+  }
+}

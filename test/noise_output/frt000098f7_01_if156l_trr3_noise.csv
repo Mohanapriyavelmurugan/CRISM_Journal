@@ -1,0 +1,6 @@
+Noise,Bands,Severity,Remedy
+N1 Stripe,1,High,1D CNN per column
+N2 Gaussian,21,Medium,Spectral DAE
+N3 Spikes,22,Low,Median filter (physics)
+N4 Thermal,0,None,Planck model subtraction (physics)
+N5 Saturation,0,None,Interpolation (physics)

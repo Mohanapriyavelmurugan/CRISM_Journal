@@ -1,0 +1,88 @@
+{
+  "metadata": {
+    "seed": 42,
+    "train_list": [
+      "frt00014679_02_if155l_trr3_S4.npy",
+      "frt0001458f_01_if156s_trr3_S4.npy",
+      "frt0001458f_01_if156s_trr3_S4.npy",
+      "frt00014954_02_if155s_trr3_S4.npy",
+      "frt00014679_01_if156s_trr3_S4.npy",
+      "frt00014679_02_if155l_trr3_S4.npy",
+      "frt00014954_02_if155s_trr3_S4.npy",
+      "frt00014679_01_if156s_trr3_S4.npy"
+    ],
+    "val_list": [
+      "frt0001458f_01_if156l_trr3_S4.npy",
+      "frt0001458f_01_if156l_trr3_S4.npy"
+    ],
+    "hyperparameters": {
+      "lr": 0.0001,
+      "batch_size": 16,
+      "epochs": 3,
+      "weight_decay": 1e-05,
+      "adam_betas": [
+        0.9,
+        0.999
+      ],
+      "adam_eps": 1e-08,
+      "scheduler_step": 30,
+      "scheduler_gamma": 0.5
+    },
+    "noise_config": {
+      "gaussian": {
+        "enabled": true,
+        "sigma_min": 0.005,
+        "sigma_max": 0.05,
+        "band_dependent": true
+      },
+      "poisson": {
+        "enabled": true,
+        "scale": 1000.0
+      },
+      "striping": {
+        "enabled": true,
+        "probability": 0.35,
+        "amplitude_min": 0.01,
+        "amplitude_max": 0.06,
+        "band_dependent": true
+      },
+      "detector_offsets": {
+        "enabled": true,
+        "probability": 0.1,
+        "amplitude_min": -0.04,
+        "amplitude_max": 0.04
+      },
+      "dead_pixels": {
+        "enabled": true,
+        "probability": 0.002
+      }
+    },
+    "model_config": {
+      "K_ADJACENT": 24,
+      "N_FEAT_SCALE": 20,
+      "N_BACKBONE_CH": 64
+    }
+  },
+  "history": {
+    "train_loss": [
+      12.819202286766766,
+      0.5512684314304347,
+      0.4243127522653899
+    ],
+    "val_loss": [
+      0.835471170405819,
+      0.546589578327523,
+      0.5634485711449901
+    ],
+    "val_mpsnr": [
+      1.8075958694921255,
+      3.729440136293645,
+      3.5697238872284602
+    ],
+    "val_mssim": [
+      0.05183518188857147,
+      0.04756513365097576,
+      0.10631374908154828
+    ]
+  }
+}

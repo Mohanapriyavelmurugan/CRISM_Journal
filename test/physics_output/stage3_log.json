@@ -1,0 +1,62 @@
+{
+  "frt000098f7_01_if156l_trr3": {
+    "snr_before": 8.8298,
+    "snr_after": 8.9228,
+    "snr_delta_pct": 1.05,
+    "atm_method": "multiplicative_anchor",
+    "thermal_corrected": false,
+    "spikes_corrected": true,
+    "sat_corrected": false,
+    "output_path": "/Users/snehasr/Downloads/crism-final-data-main/test/physics_output/./frt000098f7_01_if156l_trr3_S3.npy"
+  },
+  "frt000098f7_01_if156s_trr3": {
+    "snr_before": 19.3037,
+    "snr_after": 20.0767,
+    "snr_delta_pct": 4.0,
+    "atm_method": "multiplicative_anchor",
+    "thermal_corrected": false,
+    "spikes_corrected": false,
+    "sat_corrected": false,
+    "output_path": "/Users/snehasr/Downloads/crism-final-data-main/test/physics_output/./frt000098f7_01_if156s_trr3_S3.npy"
+  },
+  "frt000098fe_01_if156l_trr3": {
+    "snr_before": 20.8848,
+    "snr_after": 20.1482,
+    "snr_delta_pct": -3.53,
+    "atm_method": "multiplicative_anchor",
+    "thermal_corrected": true,
+    "spikes_corrected": true,
+    "sat_corrected": false,
+    "output_path": "/Users/snehasr/Downloads/crism-final-data-main/test/physics_output/./frt000098fe_01_if156l_trr3_S3.npy"
+  },
+  "frt000098fe_01_if156s_trr3": {
+    "snr_before": 53.466,
+    "snr_after": 53.1412,
+    "snr_delta_pct": -0.61,
+    "atm_method": "multiplicative_anchor",
+    "thermal_corrected": false,
+    "spikes_corrected": true,
+    "sat_corrected": false,
+    "output_path": "/Users/snehasr/Downloads/crism-final-data-main/test/physics_output/./frt000098fe_01_if156s_trr3_S3.npy"
+  },
+  "frt00009907_01_if158l_trr3": {
+    "snr_before": 54.1353,
+    "snr_after": 54.6305,
+    "snr_delta_pct": 0.91,
+    "atm_method": "multiplicative_anchor",
+    "thermal_corrected": true,
+    "spikes_corrected": true,
+    "sat_corrected": false,
+    "output_path": "/Users/snehasr/Downloads/crism-final-data-main/test/physics_output/./frt00009907_01_if158l_trr3_S3.npy"
+  },
+  "frt00009907_01_if158s_trr3": {
+    "snr_before": 160.9666,
+    "snr_after": 178.0213,
+    "snr_delta_pct": 10.6,
+    "atm_method": "multiplicative_anchor",
+    "thermal_corrected": false,
+    "spikes_corrected": true,
+    "sat_corrected": true,
+    "output_path": "/Users/snehasr/Downloads/crism-final-data-main/test/physics_output/./frt00009907_01_if158s_trr3_S3.npy"
+  }
+}

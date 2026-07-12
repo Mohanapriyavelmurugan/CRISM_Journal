@@ -1,0 +1,22 @@
+{
+  "frt000098f7_01_if156l_trr3": {
+    "runtime_seconds": 0.5515482425689697,
+    "peak_memory_mb": 1074.78125
+  },
+  "frt000098fe_01_if156l_trr3": {
+    "runtime_seconds": 0.19730472564697266,
+    "peak_memory_mb": 1074.78125
+  },
+  "frt00009907_01_if158l_trr3": {
+    "runtime_seconds": 0.2042849063873291,
+    "peak_memory_mb": 1074.765625
+  },
+  "frt0001458f_01_if156l_trr3": {
+    "runtime_seconds": 0.17514276504516602,
+    "peak_memory_mb": 1074.765625
+  },
+  "frt00014679_02_if155l_trr3": {
+    "runtime_seconds": 0.15714383125305176,
+    "peak_memory_mb": 1074.765625
+  }
+}

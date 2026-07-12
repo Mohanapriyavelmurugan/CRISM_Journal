@@ -1,0 +1,32 @@
+{
+  "seed": 42,
+  "noise": {
+    "gaussian": {
+      "enabled": true,
+      "sigma_min": 0.005,
+      "sigma_max": 0.05,
+      "band_dependent": true
+    },
+    "poisson": {
+      "enabled": true,
+      "scale": 1000.0
+    },
+    "striping": {
+      "enabled": true,
+      "probability": 0.35,
+      "amplitude_min": 0.01,
+      "amplitude_max": 0.06,
+      "band_dependent": true
+    },
+    "detector_offsets": {
+      "enabled": true,
+      "probability": 0.1,
+      "amplitude_min": -0.04,
+      "amplitude_max": 0.04
+    },
+    "dead_pixels": {
+      "enabled": true,
+      "probability": 0.002
+    }
+  }
+}

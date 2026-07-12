@@ -1,0 +1,10 @@
+*.npy
+*.img
+*.hdr
+*.pth
+*.pt
+*.joblib
+__pycache__/
+.DS_Store
+.venv/
+env/

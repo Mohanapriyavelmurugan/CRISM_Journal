@@ -1,0 +1,62 @@
+=== ABLATION STATISTICAL ANALYSIS ===
+Reference: Variant D (Full Hybrid Pipeline)
+
+--- Variant A vs Variant D ---
+SNR:
+  Mean diff (X - D): -41.1870
+  95% CI: [-88.4879, 6.1140]
+  Paired t-test p-value: 1.486e-01
+  Wilcoxon p-value: 1.250e-01
+  Cohen's d: -0.697
+Pearson:
+  Mean diff (X - D): 0.0085
+  95% CI: [0.0001, 0.0169]
+  Paired t-test p-value: 1.031e-01
+  Wilcoxon p-value: 6.250e-02
+  Cohen's d: 0.813
+SAM:
+  Mean diff (X - D): -0.0272
+  95% CI: [-0.0429, -0.0115]
+  Paired t-test p-value: 1.928e-02
+  Wilcoxon p-value: 3.125e-02
+  Cohen's d: -1.388
+
+--- Variant B vs Variant D ---
+SNR:
+  Mean diff (X - D): 1.5290
+  95% CI: [-0.3440, 3.4021]
+  Paired t-test p-value: 1.705e-01
+  Wilcoxon p-value: 1.250e-01
+  Cohen's d: 0.653
+Pearson:
+  Mean diff (X - D): -0.0039
+  95% CI: [-0.0103, 0.0025]
+  Paired t-test p-value: 2.881e-01
+  Wilcoxon p-value: 6.250e-01
+  Cohen's d: -0.485
+SAM:
+  Mean diff (X - D): 0.0043
+  95% CI: [-0.0020, 0.0106]
+  Paired t-test p-value: 2.414e-01
+  Wilcoxon p-value: 6.250e-01
+  Cohen's d: 0.542
+
+--- Variant C vs Variant D ---
+SNR:
+  Mean diff (X - D): -41.3124
+  95% CI: [-88.5801, 5.9554]
+  Paired t-test p-value: 1.474e-01
+  Wilcoxon p-value: 1.250e-01
+  Cohen's d: -0.699
+Pearson:
+  Mean diff (X - D): 0.0083
+  95% CI: [-0.0000, 0.0166]
+  Paired t-test p-value: 1.074e-01
+  Wilcoxon p-value: 1.250e-01
+  Cohen's d: 0.800
+SAM:
+  Mean diff (X - D): -0.0196
+  95% CI: [-0.0329, -0.0063]
+  Paired t-test p-value: 3.431e-02
+  Wilcoxon p-value: 1.250e-01
+  Cohen's d: -1.179
