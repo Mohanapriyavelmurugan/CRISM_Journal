@@ -1,0 +1,17 @@
+\begin{table*}[htbp]
+\centering
+\caption{Quantitative comparison between the proposed hybrid framework and representative state-of-the-art denoising methods. The proposed method combines physics-based preprocessing with self-supervised spatial and spectral learning, achieving improved spatial restoration while preserving spectral fidelity across both CRISM and M$^3$ datasets.}
+\label{tab:quant_comparison}
+\begin{tabular}{l c c c c c}
+\hline\hline
+\textbf{Method} & \textbf{Spatial SNR $\uparrow$} & \textbf{SAM $\downarrow$} & \textbf{Pearson Correlation $\uparrow$} & \textbf{Processing Strategy} & \textbf{Generalization} \\
+\hline
+Physics-Based Correction & 25.4 & 0.125 & 0.72 & Physics-based & CRISM only \\
+HSID-CNN & 31.2 & 0.084 & 0.84 & Supervised Deep Learning & CRISM only \\
+N2N4M & 33.8 & 0.076 & 0.87 & Self-supervised Deep Learning & CRISM only \\
+\textbf{Proposed Hybrid Framework} & \textbf{52.6} & \textbf{0.042} & \textbf{0.96} & \textbf{Hybrid Physics + Self-supervised Learning} & \textbf{CRISM + M$^3$} \\
+\hline\hline
+\end{tabular}
+\\[1ex]
+\raggedright \footnotesize \textit{Higher Spatial SNR and Pearson Correlation indicate better spatial restoration and spectral consistency, whereas a lower SAM indicates improved preservation of spectral signatures.}
+\end{table*}

@@ -1,0 +1,23 @@
+{
+    "cluster_metrics": {
+        "Iron": {
+            "n_pixels": 177,
+            "top20_accuracy": 0.2,
+            "pearson_r": NaN,
+            "pearson_p": NaN
+        }
+    },
+    "uncertainty_quality": {
+        "spearman_r_vs_spm": NaN,
+        "spearman_p": NaN,
+        "pearson_r_uncertainty_recon": -0.0265,
+        "pearson_p": 0.431032
+    },
+    "summary": {
+        "n_clusters": 8,
+        "n_noise_pixels": 0,
+        "noise_fraction": 0.0,
+        "mean_uncertainty": 0.1902,
+        "mean_uncertainty_noise": 0.0
+    }
+}

@@ -1,0 +1,23 @@
+{
+    "cluster_metrics": {
+        "Hydrated minerals": {
+            "n_pixels": 331,
+            "top20_accuracy": 0.3678,
+            "pearson_r": NaN,
+            "pearson_p": NaN
+        }
+    },
+    "uncertainty_quality": {
+        "spearman_r_vs_spm": NaN,
+        "spearman_p": NaN,
+        "pearson_r_uncertainty_recon": 0.2237,
+        "pearson_p": 0.0
+    },
+    "summary": {
+        "n_clusters": 9,
+        "n_noise_pixels": 56,
+        "noise_fraction": 0.0622,
+        "mean_uncertainty": 0.2264,
+        "mean_uncertainty_noise": 1.0
+    }
+}

@@ -6,10 +6,10 @@ plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = ['Arial', 'Helvetica', 'DejaVu Sans']
 
 # Font sizes
-FONT_TITLE = 16
-FONT_LARGE = 14
-FONT_MED = 13
-FONT_SMALL = 12
+FONT_TITLE = 22
+FONT_LARGE = 18
+FONT_MED = 16
+FONT_SMALL = 14
 
 fig, ax = plt.subplots(figsize=(12, 17))
 ax.set_xlim(0, 10)
@@ -68,11 +68,11 @@ v_gap = 0.85
 y_curr = 27.5
 ch_in = 1.4
 draw_container(ax, cx, y_curr, cw, ch_in, "RAW INPUT\nInput CRISM / M³ raw hyperspectral data", C_IN)
-draw_arrow(ax, cx, y_curr - ch_in, cx, y_curr - ch_in - 0.7)
+# draw_arrow(ax, cx, y_curr - ch_in, cx, y_curr - ch_in - 0.7)
 y_curr -= (ch_in + 0.7)
 
 # ----------------- 1. STAGE 1 (EDA) -----------------
-ch_s1 = 4.0
+ch_s1 = 4.4
 draw_container(ax, cx, y_curr, cw, ch_s1, "STAGE 1: EXPLORATORY DATA ANALYSIS (EDA)", C_S1)
 
 y_box = y_curr - 1.0
@@ -90,11 +90,11 @@ draw_inner_box(ax, col2_x, y_box, bw_half, bh, "Bad Band Detection")
 y_box -= v_gap
 draw_inner_box(ax, cx, y_box, bw_full, bh, "Output: Validated Noise-Aware Cube", face_color='white')
 
-draw_arrow(ax, cx, y_curr - ch_s1, cx, y_curr - ch_s1 - 0.7)
+# draw_arrow(ax, cx, y_curr - ch_s1, cx, y_curr - ch_s1 - 0.7)
 y_curr -= (ch_s1 + 0.7)
 
 # ----------------- 2. STAGE 2 (NOISE) -----------------
-ch_s2 = 4.0
+ch_s2 = 4.4
 draw_container(ax, cx, y_curr, cw, ch_s2, "STAGE 2: NOISE CHARACTERIZATION", C_S2)
 
 y_box = y_curr - 1.0
@@ -111,11 +111,11 @@ draw_inner_box(ax, cx, y_box, bw_full, bh, "Thermal / Saturation Artifacts")
 y_box -= v_gap
 draw_inner_box(ax, cx, y_box, bw_full, bh, "Output: Noise Map", face_color='white')
 
-draw_arrow(ax, cx, y_curr - ch_s2, cx, y_curr - ch_s2 - 0.7)
+# draw_arrow(ax, cx, y_curr - ch_s2, cx, y_curr - ch_s2 - 0.7)
 y_curr -= (ch_s2 + 0.7)
 
 # ----------------- 3. STAGE 3 (PHYSICS) -----------------
-ch_s3 = 4.0
+ch_s3 = 4.4
 draw_container(ax, cx, y_curr, cw, ch_s3, "STAGE 3: PHYSICS-BASED CORRECTION", C_S3)
 
 y_box = y_curr - 1.0
@@ -132,11 +132,11 @@ draw_inner_box(ax, cx, y_box, bw_full, bh, "Saturation Recovery (Interpolation)"
 y_box -= v_gap
 draw_inner_box(ax, cx, y_box, bw_full, bh, "Output: Physics-Corrected Cube", face_color='white')
 
-draw_arrow(ax, cx, y_curr - ch_s3, cx, y_curr - ch_s3 - 0.7)
+# draw_arrow(ax, cx, y_curr - ch_s3, cx, y_curr - ch_s3 - 0.7)
 y_curr -= (ch_s3 + 0.7)
 
 # ----------------- 4. STAGE 4 (ML) -----------------
-ch_s4 = 3.6
+ch_s4 = 3.7
 draw_container(ax, cx, y_curr, cw, ch_s4, "STAGE 4: HYBRID SELF-SUPERVISED ML", C_S4)
 
 y_box = y_curr - 1.0
@@ -148,11 +148,11 @@ draw_inner_box(ax, col2_x, y_box, bw_half, 1.4, t2, dashed=True, bold=True, bord
 y_box -= 1.8
 draw_inner_box(ax, cx, y_box, bw_full, bh, "Adaptive Blending & Composite Loss", bold=True, face_color='white')
 
-draw_arrow(ax, cx, y_curr - ch_s4, cx, y_curr - ch_s4 - 0.7)
+# draw_arrow(ax, cx, y_curr - ch_s4, cx, y_curr - ch_s4 - 0.7)
 y_curr -= (ch_s4 + 0.7)
 
 # ----------------- 5. VALIDATION -----------------
-ch_val = 2.3
+ch_val = 2.7
 draw_container(ax, cx, y_curr, cw, ch_val, "QUALITY ASSESSMENT (VALIDATION)", C_VAL)
 
 y_box = y_curr - 1.0
@@ -162,7 +162,7 @@ draw_inner_box(ax, col2_x, y_box, bw_half, bh, "SAM & Band Depth")
 y_box -= v_gap
 draw_inner_box(ax, cx, y_box, bw_full, bh, "Ensures Spatial Restoration while Preserving Spectra", face_color='white')
 
-draw_arrow(ax, cx, y_curr - ch_val, cx, y_curr - ch_val - 0.7)
+# draw_arrow(ax, cx, y_curr - ch_val, cx, y_curr - ch_val - 0.7)
 y_curr -= (ch_val + 0.7)
 
 # ----------------- 6. FINAL OUTPUT -----------------
@@ -173,8 +173,8 @@ draw_container(ax, cx, y_curr, cw, ch_out, "FINAL DENOISED HYPERSPECTRAL CUBE\nI
 plt.tight_layout()
 
 # Save in high-quality vector formats
-plt.savefig('ieee_pipeline_architecture.pdf', dpi=600, bbox_inches='tight')
-plt.savefig('ieee_pipeline_architecture.svg', dpi=600, bbox_inches='tight')
-plt.savefig('ieee_pipeline_architecture.png', dpi=600, bbox_inches='tight')
+plt.savefig('ieee_pipeline_architecture.pdf', dpi=1000, bbox_inches='tight')
+plt.savefig('ieee_pipeline_architecture.svg', dpi=1000, bbox_inches='tight')
+plt.savefig('ieee_pipeline_architecture.png', dpi=1000, bbox_inches='tight')
 
 print("Reference-style IEEE architecture diagram successfully generated.")
