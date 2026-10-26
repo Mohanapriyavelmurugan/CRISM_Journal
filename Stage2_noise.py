@@ -442,7 +442,7 @@ def run_noise_characterisation(data_dir=DATA_DIR,
             print(f"  ❌ Load error: {e}"); continue
 
         H, W, B = cube_raw.shape
-        waves    = get_sensor_waves(B, meta.get('wavelengths'))
+        waves    = get_sensor_waves(B, meta.get('wavelengths'), data_dir=data_dir)
         bad_mask = build_bad_mask(waves)
         dead     = eda[sname].get('dead_bands', [])
 

@@ -11,15 +11,14 @@ Handles:
 
 Wavelength note
 ---------------
-CRISM TRR3 L-sensor wavelengths are NOT uniformly spaced.
-We read them from the BAND_BIN_CENTER keyword inside the
-BAND_BIN object of the PDS3 label.  If that table is absent
-we fall back to the empirical per-sensor lookup derived from
-the CRISM Spectral Parameters document (Viviano-Beck+2014),
-which is still far more accurate than a raw linspace.
+CRISM TRR3 L labels often omit BAND_BIN_CENTER (wavelengths live in a
+separate WA CDR).  For 438-band L cubes we build a descending axis from
+the USGS CRISM-convolved wavelength table (cvCRISMjMTR3) — this is the
+CRISM channel µm list, not Earth geology.  Band 0 ≈ long-λ (~3.9 µm),
+band 437 ≈ short-λ (~1.0 µm).  Cached per-scene as wavelengths_L438.npy.
 """
 
-import os, re
+import os, re, glob
 import numpy as np
 
 # ─────────────────────────────────────────────────────────────
@@ -28,66 +27,195 @@ import numpy as np
 IF_MAX =  1.30   # Lambertian upper bound for Mars
 IF_MIN = -0.05   # dark-current noise floor
 
-# ─────────────────────────────────────────────────────────────
-# EMPIRICAL WAVELENGTH TABLES (fallback when label has none)
-# Derived from CRISM CDR wave tables; accurate to ±0.5 nm.
-# L-sensor: 438 bands, 1.028–3.920 µm
-# S-sensor: 107 bands, 0.362–1.053 µm
-# ─────────────────────────────────────────────────────────────
-# For the L-sensor the spacing is non-uniform near filter
-# boundaries (~1.65 µm, ~3.0 µm).  We model it piecewise:
-def _build_L_wavelengths():
+# USGS CRISM-convolved L grid (µm / nm). Dispersion from
+# s07CRSMj_CRISM_Waves_JOINED_MTR3_microns_489ch.txt.
+_USGS_L_STEP = 0.0066101          # µm per channel
+_USGS_L_SHORT = 1.00364           # short-λ end of L grid
+_DEFAULT_USGS_WAVE_FILE = os.path.join(
+    r"D:\spectral_libraries\USGS\usgs_splib07\ASCIIdata"
+    r"\ASCIIdata_splib07b_cvCRISMjMTR3",
+    "s07CRSMj_CRISM_Waves_JOINED_MTR3_microns_489ch.txt",
+)
+
+
+def _parse_usgs_wave_file(path: str) -> np.ndarray:
+    vals = []
+    with open(path, "r", encoding="utf-8", errors="ignore") as f:
+        for i, ln in enumerate(f):
+            if i == 0:
+                continue
+            ln = ln.strip()
+            if not ln:
+                continue
+            try:
+                vals.append(float(ln.split()[0]))
+            except ValueError:
+                continue
+    return np.asarray(vals, dtype=np.float64)
+
+
+def build_crism_L_waves_usgs(n_bands: int = 438, wave_file: str = None) -> np.ndarray:
     """
-    Approximate CRISM L-sensor wavelength axis (438 bands).
-    Piecewise linear segments that match the empirical CDR
-    wave table to within 0.5 nm across the full range.
+    Build CRISM L-sensor wavelength axis (µm), descending in band index.
+
+    Uses the USGS CRISM-convolved joined wavelength table for dispersion,
+    then places the short-λ end so the saturated ~2.70 µm CO₂ core falls
+    on the known invalid mid-detector run (Scene 1 / typical TRR3 L).
+
+    This is a *sensor channel list*, not a mineral library match.
     """
-    # Anchor points: (band_index_0based, wavelength_um)
-    anchors = [
-        (0,   1.0285), (55,  1.1805), (107, 1.3330),
-        (160, 1.5065), (213, 1.6935), (260, 1.8520),
-        (307, 2.0150), (354, 2.1860), (380, 2.2700),
-        (407, 2.4950), (437, 3.9200),
-    ]
-    waves = np.zeros(438)
-    for i in range(len(anchors) - 1):
-        b0, w0 = anchors[i]
-        b1, w1 = anchors[i + 1]
-        idx = np.arange(b0, b1 + 1)
-        waves[b0:b1 + 1] = np.linspace(w0, w1, len(idx))
+    if n_bands != 438:
+        raise ValueError(f"USGS L builder expects 438 bands, got {n_bands}")
+
+    step = _USGS_L_STEP
+    short = _USGS_L_SHORT
+    path = wave_file or os.environ.get("USGS_CRISM_WAVES", _DEFAULT_USGS_WAVE_FILE)
+    if path and os.path.isfile(path):
+        try:
+            all_w = _parse_usgs_wave_file(path)
+            L = all_w[all_w > 1.0]
+            if len(L) >= 50:
+                d = np.diff(L)
+                step = float(np.median(d[d > 0]))
+                short = float(L.min())
+        except Exception as e:
+            print(f"  [WARN] USGS wave file unreadable ({e}); using defaults")
+
+    # Place short-λ at last band; ascending channel index from short→long,
+    # then reverse so band 0 = long wavelength (matches TRR3 L byte order).
+    # Offset calibrated so mid invalid run (~band 175.5) ≈ 2.75 µm CO₂.
+    # w[b] = w_short + step*(n_bands-1-b)
+    # Solve: 2.75 = w_short + step*(437-175.5)  →  w_short ≈ 1.022
+    co2_band = 175.5
+    co2_um = 2.75
+    w_short = co2_um - step * ((n_bands - 1) - co2_band)
+    # Prefer USGS short if within 30 nm of calibrated value
+    if abs(w_short - short) < 0.030:
+        w_short = short
+    waves = w_short + step * np.arange(n_bands - 1, -1, -1, dtype=np.float64)
     return waves.astype(np.float32)
 
-WAVES_L = _build_L_wavelengths()                           # shape (438,)
-WAVES_S = np.linspace(0.3620, 1.0530, 107).astype(np.float32)  # shape (107,)
 
-def get_sensor_waves(n_bands: int, label_waves=None):
+def assert_crism_L_wavelengths(waves: np.ndarray, cube: np.ndarray = None) -> dict:
     """
-    Return the wavelength array for a cube with `n_bands` bands.
-    Priority: (1) values parsed from PDS3 label,
-              (2) empirical table for known band counts,
-              (3) linspace last resort.
+    Physics gate: fail loudly if the L axis is ascending/wrong.
+    Returns a small diagnostics dict on success.
+    """
+    waves = np.asarray(waves, dtype=np.float64)
+    if waves.size < 100:
+        raise ValueError("Wavelength axis too short for CRISM L")
+    if waves[0] < waves[-1]:
+        raise ValueError(
+            f"CRISM L wavelength axis must be DESCENDING in band index "
+            f"(got band0={waves[0]:.3f} < bandN={waves[-1]:.3f}). "
+            f"Refusing to run with a flipped ruler."
+        )
+    if not (3.5 < waves[0] < 4.2 and 0.90 < waves[-1] < 1.15):
+        raise ValueError(
+            f"CRISM L endpoints look wrong: [{waves[0]:.3f}, {waves[-1]:.3f}] µm "
+            f"(expected ~3.9 → ~1.0)."
+        )
+    info = {
+        "band0_um": float(waves[0]),
+        "bandN_um": float(waves[-1]),
+        "descending": True,
+    }
+    if cube is not None:
+        H, W, B = cube.shape
+        if B != len(waves):
+            raise ValueError(f"Cube bands {B} != waves {len(waves)}")
+        # Scene median on interior columns
+        c0, c1 = max(0, W // 10), min(W, W - W // 10)
+        med = np.nanmedian(cube[:, c0:c1, :].reshape(-1, B), axis=0)
+        ok = np.isfinite(med)
+        if ok.sum() < 50:
+            print("  [WARN] wavelength assert: too few finite median bands")
+            return info
+        # Deepest absorption should be near 2.70 µm
+        bi_deep = int(np.nanargmin(med))
+        w_deep = float(waves[bi_deep])
+        info["deepest_band"] = bi_deep
+        info["deepest_um"] = w_deep
+        if not (2.55 <= w_deep <= 2.85):
+            raise ValueError(
+                f"Deepest median absorption at band {bi_deep} = {w_deep:.3f} µm "
+                f"(expected ~2.70 µm CO2). Wavelength axis still wrong."
+            )
+        # Local min near 2.01 µm CO2
+        near = np.where((waves >= 1.95) & (waves <= 2.10) & ok)[0]
+        if len(near):
+            bi_201 = int(near[np.argmin(med[near])])
+            info["co2_201_band"] = bi_201
+            info["co2_201_um"] = float(waves[bi_201])
+        print(f"  [WAVES OK] descending {waves[0]:.3f}→{waves[-1]:.3f} µm | "
+              f"deepest@{w_deep:.3f} µm")
+    return info
+
+
+def resolve_sensor_waves(n_bands: int, label_waves=None, data_dir: str = None,
+                         cube: np.ndarray = None) -> np.ndarray:
+    """
+    Resolve wavelength axis with caching.
+    Priority: label → cached scene file → USGS CRISM L builder → S linspace.
     """
     if label_waves is not None and len(label_waves) == n_bands:
-        return np.array(label_waves, dtype=np.float32)
+        waves = np.array(label_waves, dtype=np.float32)
+        if n_bands == 438:
+            assert_crism_L_wavelengths(waves, cube=cube)
+        return waves
+
+    if data_dir and n_bands == 438:
+        cache = os.path.join(data_dir, "wavelengths_L438.npy")
+        if os.path.isfile(cache):
+            waves = np.load(cache).astype(np.float32)
+            if waves.shape == (438,):
+                assert_crism_L_wavelengths(waves, cube=cube)
+                return waves
+
     if n_bands == 438:
-        return WAVES_L.copy()
+        waves = build_crism_L_waves_usgs(438)
+        assert_crism_L_wavelengths(waves, cube=cube)
+        if data_dir:
+            try:
+                os.makedirs(data_dir, exist_ok=True)
+                np.save(os.path.join(data_dir, "wavelengths_L438.npy"), waves)
+            except Exception:
+                pass
+        return waves
+
     if n_bands == 107:
         return WAVES_S.copy()
-    # Generic fallback
-    return np.linspace(0.362, 3.920, n_bands).astype(np.float32)
+
+    raise ValueError(
+        f"No wavelength table for n_bands={n_bands}. "
+        f"Supply label BAND_BIN_CENTER or a cached axis."
+    )
+
+
+def get_sensor_waves(n_bands: int, label_waves=None, data_dir: str = None,
+                     cube: np.ndarray = None):
+    """
+    Return the wavelength array for a cube with `n_bands` bands.
+    For 438-band L cubes the axis is DESCENDING (long→short).
+    """
+    return resolve_sensor_waves(n_bands, label_waves=label_waves,
+                                data_dir=data_dir, cube=cube)
+
+
+WAVES_L = build_crism_L_waves_usgs(438)                    # shape (438,)
+WAVES_S = np.linspace(0.3620, 1.0530, 107).astype(np.float32)  # shape (107,)
 
 # ─────────────────────────────────────────────────────────────
-# BAD-BAND REGIONS  (Murchie+2007, Viviano-Beck+2014)
+# BAD-BAND REGIONS  (hard excludes only — keep mineral diagnostics)
+# Keep ~1.05 (olivine), ~1.9 (hydration), ~2.14–2.30 (clays).
+# Blank true CO2 cores, saturated 2.7 µm, thermal tail, cut-on edge.
 # ─────────────────────────────────────────────────────────────
 BAD_BAND_REGIONS_L = [
-    (1.000, 1.070),   # detector startup / stray light
-    (1.370, 1.420),   # telluric + atmospheric H2O
-    (1.810, 1.950),   # H2O + CO2 overlap
-    (2.010, 2.060),   # CO2 core
-    (2.140, 2.260),   # detector filter-boundary artefact (full window)
-    (2.600, 2.760),   # deep atmospheric CO2 + H2O
-    (3.160, 3.220),   # minor CO2
-    (3.550, 4.000),   # thermal emission tail
+    (0.970, 1.025),   # below / at L cut-on
+    (1.370, 1.420),   # telluric H2O (narrow)
+    (1.980, 2.070),   # atmospheric CO2 core (keep ~1.93 for BD1900)
+    (2.650, 2.800),   # saturated CO2 / deep atm
+    (3.500, 4.000),   # thermal emission tail
 ]
 
 BAD_BAND_REGIONS_S = [
@@ -95,12 +223,17 @@ BAD_BAND_REGIONS_S = [
     (0.930, 0.960),   # atmospheric O2
 ]
 
+# Extra-hard excludes for SPM channel picking (same as bad for L now)
+SPM_HARD_EXCLUDE_REGIONS = list(BAD_BAND_REGIONS_L)
+
+
 def build_bad_mask(waves: np.ndarray) -> np.ndarray:
     """
     Boolean mask: True = bad / unreliable band.
     Automatically selects L vs S region list by wavelength range.
+    For L, uses endpoints: descending axis has waves[0] > waves[-1].
     """
-    is_L = waves[-1] > 1.5
+    is_L = float(np.nanmax(waves)) > 1.5
     regions = BAD_BAND_REGIONS_L if is_L else BAD_BAND_REGIONS_S
     mask = np.zeros(len(waves), dtype=bool)
     for lo, hi in regions:

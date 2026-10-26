@@ -72,9 +72,12 @@ POST-DENOISING VALIDATION BUILT IN
   These are written to the validation JSON.
 
 VALIDATION STATUS CHECK (inline, no separate stage needed):
-  PASS  : SNR improved, SAM < 0.05 rad, key band depths preserved ±20%
-  REVIEW: SNR improved but SAM in 0.05–0.10 rad
-  FAIL  : SNR degraded OR SAM > 0.10 rad → original cube is kept
+  Spatial SNR (|mean|/std over the scene) is a CONTRAST PROXY, not instrument
+  SNR — spectral DAE often leaves it flat (±1–2%). Do not require SNR↑.
+  PASS  : SAM < 0.05 rad, band depths preserved ±20%, spatial SNR not
+          degraded by more than 5%
+  REVIEW: SAM in 0.05–0.10 rad (and SNR not degraded >5%)
+  FAIL  : spatial SNR drop >5% OR SAM > 0.10 rad → original cube is kept
 """
 
 import os, glob, json, warnings
@@ -171,17 +174,21 @@ class StripeCNN1D(nn.Module):
         return x - self.net(x)
 
 
-def classical_destripe(cube, bad_mask):
+def classical_destripe(cube, bad_mask, only_bands=None):
     """
-    STEP 1: Classical column-mean destriper.
-    For each band:
-      column_offset = col_mean - scene_mean
-    Remove the offset.  This handles the dominant, spectrally-flat
-    component of CRISM stripe noise.
+    STEP 1: Classical column-mean destriper (high-pass residual).
+
+    Applied ONLY to Stage-2-identified stripe bands when `only_bands`
+    is provided — applying to all good bands erases real along-track
+    geology. Offset = (col_mean - smooth_cross_track_trend).
     """
     H, W, B = cube.shape
     out = cube.copy()
-    for bi in range(B):
+    if only_bands is None:
+        band_iter = range(B)
+    else:
+        band_iter = [int(b) for b in only_bands if 0 <= int(b) < B]
+    for bi in band_iter:
         if bad_mask[bi]:
             continue
         band = out[:, :, bi]
@@ -191,9 +198,21 @@ def classical_destripe(cube, bad_mask):
         col_means = np.array([
             float(band[:, c][vm[:, c]].mean()) if vm[:, c].any() else np.nan
             for c in range(W)])
-        scene_mean = float(np.nanmean(col_means))
-        col_offsets = np.where(np.isfinite(col_means),
-                               col_means - scene_mean, 0.0)
+        fin = np.isfinite(col_means)
+        if fin.sum() < max(8, W // 4):
+            continue
+        x = np.arange(W, dtype=np.float64)
+        # Smooth trend keeps broad cross-track geology; residual is stripe
+        try:
+            coef = np.polyfit(x[fin], col_means[fin], 3)
+            trend = np.polyval(coef, x)
+        except Exception:
+            trend = np.full(W, float(np.nanmean(col_means[fin])))
+        col_offsets = np.where(fin, col_means - trend, 0.0)
+        # Cap extreme offsets
+        cap = float(np.nanpercentile(np.abs(col_offsets[fin]), 98))
+        if cap > 0:
+            col_offsets = np.clip(col_offsets, -cap, cap)
         out[:, :, bi] = np.where(vm, band - col_offsets[np.newaxis, :], band)
     return out
 
@@ -232,17 +251,25 @@ def build_stripe_training_data(cube_classical, cube_noisy,
               & (clean_band < IF_MAX) & (clean_band > IF_MIN))
         if vm.mean() < 0.5:
             continue
-        # Normalise each column profile independently
+        # Normalise each along-track column profile independently.
+        # Fill invalid samples with 0 AFTER normalisation so Conv1d never
+        # sees NaN/Inf (which breaks cuDNN on full-height FRT cubes).
         for c in range(W):
-            col_c = clean_band[:, c]
-            col_n = noisy_band[:, c]
+            col_c = clean_band[:, c].astype(np.float64)
+            col_n = noisy_band[:, c].astype(np.float64)
             ok    = vm[:, c]
             if ok.sum() < max(4, H // 4):
                 continue
             mu  = float(col_c[ok].mean())
             sig = max(float(col_c[ok].std()), 1e-6)
-            profiles_clean.append(((col_c - mu) / sig).astype(np.float32))
-            profiles_noisy.append(((col_n - mu) / sig).astype(np.float32))
+            pc = ((col_c - mu) / sig).astype(np.float32)
+            pn = ((col_n - mu) / sig).astype(np.float32)
+            pc[~ok] = 0.0
+            pn[~ok] = 0.0
+            pc = np.nan_to_num(pc, nan=0.0, posinf=0.0, neginf=0.0)
+            pn = np.nan_to_num(pn, nan=0.0, posinf=0.0, neginf=0.0)
+            profiles_clean.append(pc)
+            profiles_noisy.append(pn)
 
     if not profiles_clean:
         return None, None
@@ -251,59 +278,165 @@ def build_stripe_training_data(cube_classical, cube_noisy,
 
 
 def train_stripe_cnn(profiles_noisy, profiles_clean, W, output_dir,
-                     epochs=150):
+                     epochs=150, patience=20, init_state_path=None,
+                     save_name=None):
     """
     Train the 1D stripe CNN.
-    Input/target: (N, 1, W) — one column profile per sample.
+    Input/target: (N, 1, L) padded/truncated to length W.
     Loss: MSE + L1 + mean-preservation term.
+
+    Parameters
+    ----------
+    epochs : int
+        Maximum epochs (early-stop may finish sooner).
+    patience : int
+        Stop after this many epochs without val improvement.
+    init_state_path : str, optional
+        Warm-start from a prior checkpoint (adapt mode).
+    save_name : str, optional
+        Override checkpoint filename (default stripe_cnn_W{W}.pth).
     """
     # Pad / truncate all profiles to the same length W
     def _pad(arr):
+        arr = np.nan_to_num(arr, nan=0.0, posinf=0.0, neginf=0.0).astype(np.float32)
         if arr.shape[1] == W: return arr
         if arr.shape[1] > W:  return arr[:, :W]
         return np.pad(arr, ((0,0),(0, W - arr.shape[1])))
 
-    Xn = torch.tensor(_pad(profiles_noisy)[:, np.newaxis, :])
-    Xc = torch.tensor(_pad(profiles_clean)[:, np.newaxis, :])
+    Xn = torch.tensor(_pad(profiles_noisy)[:, np.newaxis, :], dtype=torch.float32)
+    Xc = torch.tensor(_pad(profiles_clean)[:, np.newaxis, :], dtype=torch.float32)
+    Xn = torch.nan_to_num(Xn)
+    Xc = torch.nan_to_num(Xc)
+
+    # Cap samples for memory on full-height FRT (H~450, many columns)
+    max_samples = 20000
+    if len(Xn) > max_samples:
+        sel = torch.randperm(len(Xn))[:max_samples]
+        Xn, Xc = Xn[sel], Xc[sel]
 
     perm  = torch.randperm(len(Xn))
-    nt    = int(0.8 * len(Xn))
-    Xn_tr, Xc_tr = Xn[perm[:nt]].to(DEVICE), Xc[perm[:nt]].to(DEVICE)
-    Xn_va, Xc_va = Xn[perm[nt:]].to(DEVICE), Xc[perm[nt:]].to(DEVICE)
+    if len(Xn) >= 5:
+        nt = max(1, int(0.8 * len(Xn)))
+        if nt == len(Xn):
+            nt -= 1
+        va_idx = perm[nt:]
+    else:
+        nt = len(Xn)
+        va_idx = perm[:0]
 
-    loader = DataLoader(TensorDataset(Xn_tr, Xc_tr),
-                        batch_size=256, shuffle=True, drop_last=False)
-    model = StripeCNN1D().to(DEVICE)
-    opt   = optim.Adam(model.parameters(), lr=1e-3)
-    mse   = nn.MSELoss()
-    save_path = os.path.join(output_dir, 'stripe_cnn_W{}.pth'.format(W))
+    # Keep full tensors on CPU; move mini-batches only (avoids 4 GB VRAM spikes
+    # and cuDNN "GET was unable to find an engine" on large W).
+    Xn_tr, Xc_tr = Xn[perm[:nt]], Xc[perm[:nt]]
+    Xn_va, Xc_va = Xn[va_idx], Xc[va_idx]
 
-    best_vloss = float('inf'); patience = 0
+    batch_size = 32 if W >= 256 else 128
+    train_device = DEVICE
+    fname = save_name or 'stripe_cnn_W{}.pth'.format(W)
+    save_path = os.path.join(output_dir, fname)
+    mse = nn.MSELoss()
+
+    def _make_loader(dev):
+        return DataLoader(TensorDataset(Xn_tr, Xc_tr),
+                          batch_size=batch_size, shuffle=True, drop_last=False)
+
+    def _build_model(dev):
+        m = StripeCNN1D().to(dev)
+        if init_state_path and os.path.isfile(init_state_path):
+            try:
+                m.load_state_dict(torch.load(init_state_path, map_location=dev,
+                                             weights_only=True))
+                print(f"  [StrCNN] Warm-start from {init_state_path}")
+            except Exception as e:
+                print(f"  [StrCNN] Prior load failed ({type(e).__name__}: {e}); "
+                      f"training from scratch")
+        o = optim.Adam(m.parameters(), lr=1e-3)
+        return m, o
+
+    model, opt = _build_model(train_device)
+    loader = _make_loader(train_device)
+
+    # Probe a tiny batch; fall back to CPU if cuDNN fails
+    try:
+        bx0 = Xn_tr[:min(4, len(Xn_tr))].to(train_device).contiguous()
+        with torch.no_grad():
+            _ = model(bx0)
+        del bx0
+        if train_device.type == 'cuda':
+            torch.cuda.empty_cache()
+    except RuntimeError as e:
+        print(f"  [StrCNN] CUDA probe failed ({e}); using CPU.")
+        train_device = torch.device('cpu')
+        model, opt = _build_model(train_device)
+        loader = _make_loader(train_device)
+
+    best_vloss = float('inf'); patience_ctr = 0
+    torch.save(model.state_dict(), save_path)
+    ep = -1
     for ep in range(epochs):
         model.train()
+        train_losses = []
         for bx, by in loader:
+            bx = bx.to(train_device, non_blocking=False).contiguous()
+            by = by.to(train_device, non_blocking=False).contiguous()
             opt.zero_grad()
-            pred = model(bx)
+            try:
+                pred = model(bx)
+            except RuntimeError as e:
+                if train_device.type == 'cuda':
+                    print(f"  [StrCNN] CUDA batch failed ({e}); switching to CPU.")
+                    train_device = torch.device('cpu')
+                    model, opt = _build_model(train_device)
+                    model.load_state_dict(torch.load(save_path, map_location=train_device,
+                                                     weights_only=True))
+                    loader = _make_loader(train_device)
+                    break
+                raise
             loss = (mse(pred, by)
-                    + 0.1 * torch.mean(torch.abs(pred - by))       # L1
-                    + 0.1 * torch.abs(pred.mean() - by.mean()))     # mean pres.
+                    + 0.1 * torch.mean(torch.abs(pred - by))
+                    + 0.1 * torch.abs(pred.mean() - by.mean()))
             loss.backward(); opt.step()
+            train_losses.append(float(loss.detach().cpu()))
 
         model.eval()
-        with torch.no_grad():
-            vpred  = model(Xn_va)
-            vloss  = (mse(vpred, Xc_va)
-                      + 0.1 * torch.mean(torch.abs(vpred - Xc_va))).item()
+        if len(Xn_va):
+            with torch.no_grad():
+                # validate in chunks
+                vlosses = []
+                for i in range(0, len(Xn_va), batch_size):
+                    vx = Xn_va[i:i+batch_size].to(train_device).contiguous()
+                    vy = Xc_va[i:i+batch_size].to(train_device).contiguous()
+                    vp = model(vx)
+                    vlosses.append(float(
+                        (mse(vp, vy) + 0.1 * torch.mean(torch.abs(vp - vy))).cpu()
+                    ))
+                vloss = float(np.mean(vlosses)) if vlosses else float('inf')
+        else:
+            vloss = float(np.mean(train_losses)) if train_losses else float('inf')
         if vloss < best_vloss:
-            best_vloss = vloss; patience = 0
+            best_vloss = vloss; patience_ctr = 0
             torch.save(model.state_dict(), save_path)
         else:
-            patience += 1
-            if patience >= 20: break
+            patience_ctr += 1
+            if patience_ctr >= patience:
+                print(f"  [StrCNN] Early stop at ep {ep+1} "
+                      f"(patience={patience}, best={best_vloss:.5f})")
+                break
 
-    model.load_state_dict(torch.load(save_path, map_location=DEVICE,
-                                     weights_only=True))
-    print(f"  [StrCNN] Trained {ep+1} epochs, best val MSE={best_vloss:.5f}")
+    # Load best weights; prefer DEVICE for inference, else stay on train_device
+    infer_device = DEVICE
+    try:
+        model = StripeCNN1D().to(infer_device)
+        model.load_state_dict(torch.load(save_path, map_location=infer_device,
+                                         weights_only=True))
+        with torch.no_grad():
+            _ = model(Xn_tr[:1].to(infer_device))
+    except RuntimeError:
+        infer_device = torch.device('cpu')
+        model = StripeCNN1D().to(infer_device)
+        model.load_state_dict(torch.load(save_path, map_location=infer_device,
+                                         weights_only=True))
+    print(f"  [StrCNN] Trained {ep+1} epochs (train={train_device}, "
+          f"infer={infer_device}), best val MSE={best_vloss:.5f}")
     return model
 
 
@@ -336,26 +469,33 @@ def apply_stripe_cnn(cube_classical, cube_noisy,
             norms    = []   # (mu, sig) per column
             col_idxs = []
             for c in range(W):
-                col = clean_band[:, c]
+                col = clean_band[:, c].astype(np.float64)
                 ok  = vm[:, c]
                 if ok.sum() < 2: continue
                 mu  = float(col[ok].mean())
                 sig = max(float(col[ok].std()), 1e-6)
-                profiles.append(col.astype(np.float32))
+                p = ((col - mu) / sig).astype(np.float32)
+                p[~ok] = 0.0
+                p = np.nan_to_num(p, nan=0.0, posinf=0.0, neginf=0.0)
+                profiles.append(p)
                 norms.append((mu, sig))
                 col_idxs.append(c)
 
             if not profiles: continue
-            # Pad to W
+            # Pad/truncate to W (model trained at this width)
             arr = np.array([
                 np.pad(p, (0, W - len(p))) if len(p) < W else p[:W]
                 for p in profiles], dtype=np.float32)
-            # Normalise per-column using stored (mu, sig)
-            for i, (mu, sig) in enumerate(norms):
-                arr[i] = (arr[i] - mu) / sig
+            arr = np.nan_to_num(arr, nan=0.0, posinf=0.0, neginf=0.0)
 
-            t_in = torch.tensor(arr[:, np.newaxis, :]).to(DEVICE)
-            t_out = model(t_in).squeeze(1).cpu().numpy()
+            model_device = next(model.parameters()).device
+            t_in = torch.tensor(arr[:, np.newaxis, :], dtype=torch.float32).to(model_device)
+            try:
+                t_out = model(t_in).squeeze(1).cpu().numpy()
+            except RuntimeError:
+                model_cpu = model.cpu()
+                t_out = model_cpu(t_in.cpu()).squeeze(1).numpy()
+                model.to(DEVICE)
 
             for i, c in enumerate(col_idxs):
                 mu, sig = norms[i]
@@ -465,7 +605,8 @@ def build_noise2void_dataset(cube_n, bad_mask, mask_frac=0.10,
 
 
 def train_spectral_dae(cube_n, bad_mask, B, output_dir,
-                       epochs_L=150, epochs_S=80):
+                       epochs_L=150, epochs_S=80, patience=25,
+                       init_state_path=None, save_name=None):
     """
     Train the spectral DAE using the Noise2Void blind-spot approach.
     Loss is computed ONLY on the masked positions (the ones the
@@ -474,7 +615,8 @@ def train_spectral_dae(cube_n, bad_mask, B, output_dir,
     is_L   = B > 200
     epochs = epochs_L if is_L else epochs_S
     label  = 'L' if is_L else 'S'
-    save_path = os.path.join(output_dir, f'spectral_dae_{label}_B{B}.pth')
+    fname = save_name or f'spectral_dae_{label}_B{B}.pth'
+    save_path = os.path.join(output_dir, fname)
 
     inputs, targets, masks = build_noise2void_dataset(cube_n, bad_mask)
     if inputs is None:
@@ -482,8 +624,10 @@ def train_spectral_dae(cube_n, bad_mask, B, output_dir,
         return None
 
     N = len(inputs)
-    print(f"  [DAE-{label}] Training on {N} spectra, {epochs} epochs, "
-          f"device={DEVICE}")
+    print(f"  [DAE-{label}] Training on {N} spectra, max {epochs} epochs "
+          f"(patience={patience}), device={DEVICE}")
+    if init_state_path:
+        print(f"  [DAE-{label}] Warm-start path: {init_state_path}")
 
     Xinp = torch.tensor(inputs,  dtype=torch.float32)
     Xtgt = torch.tensor(targets, dtype=torch.float32)
@@ -497,13 +641,20 @@ def train_spectral_dae(cube_n, bad_mask, B, output_dir,
     ldr_va= DataLoader(ds_va, batch_size=512, shuffle=False)
 
     model = SpectralDAE(B).to(DEVICE)
+    if init_state_path and os.path.isfile(init_state_path):
+        try:
+            model.load_state_dict(torch.load(init_state_path, map_location=DEVICE,
+                                             weights_only=True))
+            print(f"  [DAE-{label}] Loaded prior weights")
+        except Exception as e:
+            print(f"  [DAE-{label}] Prior load failed ({type(e).__name__}: {e})")
     opt   = optim.Adam(model.parameters(), lr=1e-3,
                        weight_decay=1e-5)
     sched = optim.lr_scheduler.CosineAnnealingLR(opt, epochs, eta_min=1e-5)
     mse   = nn.MSELoss()
     LAMBDA_SMOOTH = 0.05   # smoothness weight on noise estimate
 
-    best_vloss = float('inf'); patience = 0; best_ep = 0
+    best_vloss = float('inf'); patience_ctr = 0; best_ep = 0
 
     for ep in range(epochs):
         model.train()
@@ -540,13 +691,16 @@ def train_spectral_dae(cube_n, bad_mask, B, output_dir,
         val_loss /= max(1, len(ldr_va))
 
         if val_loss < best_vloss:
-            best_vloss = val_loss; patience = 0; best_ep = ep
+            best_vloss = val_loss; patience_ctr = 0; best_ep = ep
             torch.save(model.state_dict(), save_path)
         else:
-            patience += 1
-            if patience >= 25: break
+            patience_ctr += 1
+            if patience_ctr >= patience:
+                print(f"  [DAE-{label}] Early stop at ep {ep+1} "
+                      f"(patience={patience})")
+                break
 
-        if (ep + 1) % 20 == 0:
+        if (ep + 1) % 20 == 0 or ep == 0:
             print(f"    ep {ep+1:3d}/{epochs}  "
                   f"train={train_loss/len(loader):.5f}  "
                   f"val={val_loss:.5f}  best_ep={best_ep+1}")
@@ -630,8 +784,9 @@ def compute_band_depth(spectrum, waves, centre_um, left_um, right_um):
 
 def validate_denoising(cube_before, cube_after, waves, good_mask, sname):
     """
-    Check that denoising improved SNR without corrupting mineral indices.
-    Returns (status, metrics_dict).
+    Validate spectral denoise: preserve SAM + band depths; do not require
+    spatial SNR↑ (scene |mean|/std is geology-dominated contrast, not
+    instrument noise). Returns (status, metrics_dict).
     """
     snr_b = compute_snr(cube_before, good_mask)
     snr_a = compute_snr(cube_after,  good_mask)
@@ -641,9 +796,13 @@ def validate_denoising(cube_before, cube_after, waves, good_mask, sname):
     med_b = np.nanmedian(cube_before.reshape(-1, cube_before.shape[2]), axis=0)
     med_a = np.nanmedian(cube_after.reshape (-1, cube_after.shape[2]),  axis=0)
 
+    # L-sensor wavelengths are often descending — use min/max coverage, not waves[-1]
+    w_lo = float(np.nanmin(waves))
+    w_hi = float(np.nanmax(waves))
+
     bd_preservation = {}
     for name, (c, l, r) in MINERAL_BAND_CENTRES.items():
-        if waves[-1] < c:  # S-sensor doesn't cover all indices
+        if c < w_lo or c > w_hi or l < w_lo or r > w_hi:
             continue
         bd_b = compute_band_depth(med_b, waves, c, l, r)
         bd_a = compute_band_depth(med_a, waves, c, l, r)
@@ -656,15 +815,17 @@ def validate_denoising(cube_before, cube_after, waves, good_mask, sname):
                 'preserved': delta_pct < 20.0,
             }
 
-    snr_improved = snr_a > snr_b * 0.99   # allow 1% tolerance
+    snr_delta_pct = (snr_a - snr_b) / (snr_b + 1e-8) * 100
+    # Allow flat / tiny drop (spectral DAE); only hard-fail large spatial collapse
+    snr_not_degraded = snr_a >= snr_b * 0.95
     sam_ok_pass  = sam < 0.05
     sam_ok_rev   = sam < 0.10
     bd_ok = all(v['preserved'] for v in bd_preservation.values()) \
             if bd_preservation else True
 
-    if snr_improved and sam_ok_pass and bd_ok:
+    if snr_not_degraded and sam_ok_pass and bd_ok:
         status = 'PASS'
-    elif snr_improved and sam_ok_rev:
+    elif snr_not_degraded and sam_ok_rev:
         status = 'REVIEW'
     else:
         status = 'FAIL'
@@ -672,20 +833,29 @@ def validate_denoising(cube_before, cube_after, waves, good_mask, sname):
     metrics = {
         'snr_before': round(snr_b, 3),
         'snr_after':  round(snr_a, 3),
-        'snr_delta_pct': round((snr_a - snr_b) / (snr_b + 1e-8) * 100, 1),
+        'snr_delta_pct': round(float(snr_delta_pct), 1),
+        'snr_not_degraded': bool(snr_not_degraded),
+        'snr_metric_note': (
+            'spatial_|mean|/std is scene-contrast proxy, not instrument SNR; '
+            'spectral DAE is not required to increase it'
+        ),
         'sam_rad':    round(sam, 4),
         'status':     status,
         'band_depth_preservation': bd_preservation,
+        'wavelength_span_um': [round(w_lo, 4), round(w_hi, 4)],
     }
 
-    print(f"\n  ── Validation: {sname} ──")
-    print(f"  SNR: {snr_b:.3f} → {snr_a:.3f}  "
-          f"(Δ={metrics['snr_delta_pct']:+.1f}%)")
-    print(f"  SAM: {sam:.4f} rad  → {status}")
+    print(f"\n  -- Validation: {sname} --")
+    print(f"  Spatial SNR (contrast proxy): {snr_b:.3f} -> {snr_a:.3f}  "
+          f"(d={metrics['snr_delta_pct']:+.1f}%; "
+          f"{'ok' if snr_not_degraded else 'DEGRADED'})")
+    print(f"  SAM: {sam:.4f} rad  -> {status}")
+    if not bd_preservation:
+        print("  Band depths: none in wavelength coverage")
     for nm_idx, bd in bd_preservation.items():
-        sym = "✅" if bd['preserved'] else "⚠️"
-        print(f"  {sym}  {nm_idx}: {bd['before']:.4f} → {bd['after']:.4f}"
-              f"  (Δ={bd['delta_pct']:.1f}%)")
+        sym = "OK" if bd['preserved'] else "WARN"
+        print(f"  [{sym}]  {nm_idx}: {bd['before']:.4f} -> {bd['after']:.4f}"
+              f"  (d={bd['delta_pct']:.1f}%)")
     return status, metrics
 
 
@@ -695,9 +865,50 @@ def validate_denoising(cube_before, cube_after, waves, good_mask, sname):
 def run_ml_denoising(data_dir=DATA_DIR,
                      physics_dir=PHYSICS_DIR,
                      noise_dir=NOISE_DIR,
-                     output_dir=OUTPUT_DIR):
+                     output_dir=OUTPUT_DIR,
+                     mode=None,
+                     prior_dir=None):
+    """
+    Stage 4 ML denoise.
+
+    mode : 'full' | 'adapt' | None
+        None → read CRISM_TRAIN_MODE (default full).
+        adapt loads stripe/DAE priors from prior_dir and fine-tunes
+        with shorter epoch caps.
+    """
+    try:
+        from crism_transfer_config import (
+            resolve_mode, resolve_prior_dir, prior_paths,
+            epoch_budget, patience_budget,
+        )
+        train_mode = resolve_mode(mode)
+        pdir = resolve_prior_dir(prior_dir)
+        paths = prior_paths(pdir)
+        stripe_epochs = epoch_budget(train_mode, "stripe")
+        dae_epochs_L = epoch_budget(train_mode, "dae_L")
+        dae_epochs_S = epoch_budget(train_mode, "dae_S")
+        stripe_pat = patience_budget(train_mode, "stripe")
+        dae_pat = patience_budget(train_mode, "dae")
+        stripe_init = paths["stripe"] if train_mode == "adapt" else None
+        dae_init = paths["dae"] if train_mode == "adapt" else None
+        if train_mode == "adapt":
+            if stripe_init and not os.path.isfile(stripe_init):
+                print(f"  [WARN] adapt mode but missing stripe prior: {stripe_init}")
+                stripe_init = None
+            if dae_init and not os.path.isfile(dae_init):
+                print(f"  [WARN] adapt mode but missing DAE prior: {dae_init}")
+                dae_init = None
+    except Exception as e:
+        print(f"  [WARN] transfer config unavailable ({e}); using full defaults")
+        train_mode = "full"
+        stripe_epochs, dae_epochs_L, dae_epochs_S = 150, 150, 80
+        stripe_pat, dae_pat = 20, 25
+        stripe_init = dae_init = None
+
     print("=" * 65)
     print("  STAGE 4: 1D ML DENOISING")
+    print(f"  Mode: {train_mode} | stripe_ep≤{stripe_epochs} | "
+          f"dae_L_ep≤{dae_epochs_L}")
     print("  N1 Stripes  → Classical destriper + 1D residual CNN")
     print("  N2 Gaussian → Spectral DAE (Noise2Void blind-spot)")
     print("=" * 65)
@@ -749,7 +960,8 @@ def run_ml_denoising(data_dir=DATA_DIR,
         else:
             peak_mem_mb = 0.0
 
-        cube_s3 = np.load(npy_path).astype(np.float64)
+        # float32: full FRT is ~450 MB; float64 doubles RAM and breaks blend on 8 GB hosts
+        cube_s3 = np.load(npy_path).astype(np.float32, copy=False)
         H, W, B = cube_s3.shape
         noise   = noise_map[sname]
 
@@ -760,28 +972,55 @@ def run_ml_denoising(data_dir=DATA_DIR,
             lbl_path = find_label(img_path)
             if lbl_path:
                 meta = parse_pds3_label(lbl_path)
-        waves    = get_sensor_waves(B, meta.get('wavelengths'))
+        waves    = get_sensor_waves(
+            B, meta.get('wavelengths'), data_dir=data_dir, cube=cube_s3
+        )
         bad_mask = build_bad_mask(waves)
         good_mask = ~bad_mask
 
         stripe_bands   = noise.get('striped_bands', [])
-        gaussian_bands = (noise.get('high_noise_bands', []) +
-                          noise.get('medium_noise_bands', []))
-        gaussian_bands = [b for b in set(gaussian_bands) if not bad_mask[b]]
-
+        if not isinstance(stripe_bands, (list, tuple, np.ndarray)):
+            # nested Stage2 layout fallback
+            stripe_bands = (
+                noise.get('n1_stripes', {}) or {}
+            ).get('striped_bands', []) or []
+        high_noise = noise.get('high_noise_bands', [])
+        medium_noise = noise.get('medium_noise_bands', [])
+        if not isinstance(high_noise, (list, tuple)):
+            high_noise = (noise.get('n2_gaussian', {}) or {}).get('high_noise_bands', []) or []
+        if not isinstance(medium_noise, (list, tuple)):
+            medium_noise = (noise.get('n2_gaussian', {}) or {}).get('medium_noise_bands', []) or []
+        # Cap noise-band sets: denoising nearly all bands flattens mineral contrast
+        high_cap, medium_cap = 60, 40
+        if len(high_noise) > high_cap:
+            high_noise = list(high_noise)[:high_cap]
+            print(f"  [N2] Capped high_noise_bands to {high_cap} "
+                  f"(avoid over-smoothing mineral bands)")
+        if len(medium_noise) > medium_cap:
+            medium_noise = list(medium_noise)[:medium_cap]
+            print(f"  [N2] Capped medium_noise_bands to {medium_cap} "
+                  f"(avoid over-smoothing mineral bands)")
+        gaussian_bands = [b for b in set(list(high_noise) + list(medium_noise))
+                          if isinstance(b, (int, np.integer)) and 0 <= int(b) < B
+                          and not bad_mask[int(b)]]
+        stripe_bands = [int(b) for b in stripe_bands
+                        if isinstance(b, (int, np.integer)) and 0 <= int(b) < B]
         print(f"  Bands: B={B} ({'L' if B>200 else 'S'}-sensor)  "
+              f"| waves {waves[0]:.3f}→{waves[-1]:.3f} µm  "
               f"| stripe={len(stripe_bands)}  "
-              f"| gaussian={len(gaussian_bands)}")
+              f"| gaussian={len(gaussian_bands)}  "
+              f"| hard-bad={int(bad_mask.sum())}")
 
         cube_work = cube_s3.copy()
         stripe_model = None
         dae_model    = None
 
-        # ── N1: Stripe correction ──────────────────────────────
+        # ── N1: Stripe correction (ONLY Stage-2 stripe bands) ──
         if stripe_bands:
-            print(f"\n  [N1] Stripe denoising ({len(stripe_bands)} bands)")
-            # Step 1: Classical destriper (always applied)
-            cube_classical = classical_destripe(cube_work, bad_mask)
+            print(f"\n  [N1] Stripe denoising ({len(stripe_bands)} bands only)")
+            cube_classical = classical_destripe(
+                cube_work, bad_mask, only_bands=stripe_bands
+            )
 
             # Step 2: Build training data from original + classical
             cube_noisy_orig = cube_s3.copy()
@@ -791,7 +1030,9 @@ def run_ml_denoising(data_dir=DATA_DIR,
 
             if prof_n is not None and len(prof_n) >= 200:
                 stripe_model = train_stripe_cnn(
-                    prof_n, prof_c, W, output_dir, epochs=150)
+                    prof_n, prof_c, W, output_dir,
+                    epochs=stripe_epochs, patience=stripe_pat,
+                    init_state_path=stripe_init)
                 cube_destriped = apply_stripe_cnn(
                     cube_classical, cube_noisy_orig,
                     stripe_bands, bad_mask, stripe_model, W)
@@ -808,7 +1049,10 @@ def run_ml_denoising(data_dir=DATA_DIR,
         if gaussian_bands:
             print(f"\n  [N2] Gaussian denoising ({len(gaussian_bands)} bands)")
             cube_n, means, stds = per_band_norm(cube_work)
-            dae_model = train_spectral_dae(cube_n, bad_mask, B, output_dir)
+            dae_model = train_spectral_dae(
+                cube_n, bad_mask, B, output_dir,
+                epochs_L=dae_epochs_L, epochs_S=dae_epochs_S,
+                patience=dae_pat, init_state_path=dae_init)
 
             if dae_model is not None:
                 cube_n_denoised = apply_spectral_dae(
@@ -833,14 +1077,75 @@ def run_ml_denoising(data_dir=DATA_DIR,
         # Final clip to physical bounds
         cube_work = np.clip(cube_work, IF_MIN, IF_MAX)
 
+        # Keep mineral diagnostics finite: hard-bad stays NaN; everything else
+        # that became NaN during ML is restored from physics S3.
+        restored = 0
+        for bi in range(B):
+            if bad_mask[bi]:
+                continue
+            a = cube_work[:, :, bi]
+            b = cube_s3[:, :, bi]
+            miss = (~np.isfinite(a)) & np.isfinite(b)
+            if miss.any():
+                a = a.copy()
+                a[miss] = b[miss]
+                cube_work[:, :, bi] = a
+                restored += 1
+        if restored:
+            print(f"  [DIAG] Restored {restored} non-bad bands from S3 "
+                  f"(preserve mineral diagnostics)")
+
+        # Radiometric flatness: per-band median ratio S4/S3 on good bands
+        ratios = []
+        for bi in np.where(good_mask)[0]:
+            m3 = np.nanmedian(cube_s3[:, :, bi])
+            m4 = np.nanmedian(cube_work[:, :, bi])
+            if np.isfinite(m3) and abs(m3) > 1e-6 and np.isfinite(m4):
+                ratios.append(float(m4 / m3))
+        if ratios:
+            r = np.asarray(ratios)
+            print(f"  [RAD] S4/S3 median ratio: mean={r.mean():.4f} "
+                  f"std={r.std():.4f}  (want ~1.0 flat)")
+            # Soft correction if systematic darkening > 2%
+            if abs(r.mean() - 1.0) > 0.02:
+                scale = float(1.0 / r.mean())
+                print(f"  [RAD] Applying global gain {scale:.4f} to flatten radiometry")
+                for bi in np.where(good_mask)[0]:
+                    band = cube_work[:, :, bi]
+                    ok = np.isfinite(band)
+                    band = band.copy()
+                    band[ok] = band[ok] * scale
+                    cube_work[:, :, bi] = band
+
         # ── Validation & Adaptive Blending ────────────────────
         status, metrics = validate_denoising(
             cube_s3, cube_work, waves, good_mask, sname)
+        metrics['s4_s3_ratio_mean'] = float(np.mean(ratios)) if ratios else None
+        metrics['s4_s3_ratio_std'] = float(np.std(ratios)) if ratios else None
+        metrics['diagnostic_bands_restored'] = int(restored)
+        metrics['finite_frac_good'] = float(
+            np.mean(np.isfinite(cube_work[:, :, good_mask]))
+        )
 
         if status == 'REVIEW':
             print(f"  [ADAPTIVE] Status is REVIEW (SAM={metrics['sam_rad']:.4f}). "
                   f"Applying safe-blending (70% ML, 30% Physics)...")
-            cube_work = 0.7 * cube_work + 0.3 * cube_s3
+            # Band-wise float32 blend — avoids float64 temp (~900 MiB on full FRT)
+            # that raised MemoryError: Unable to allocate 898 MiB ...
+            ml = np.asarray(cube_work, dtype=np.float32)
+            phys = np.asarray(cube_s3, dtype=np.float32)
+            if ml is not cube_work:
+                cube_work = ml
+            w_ml = np.float32(0.7)
+            w_ph = np.float32(0.3)
+            for bi in range(B):
+                cube_work[:, :, bi] = (
+                    w_ml * cube_work[:, :, bi] + w_ph * phys[:, :, bi]
+                )
+            del ml
+            _clear = getattr(torch.cuda, "empty_cache", None)
+            if torch.cuda.is_available() and _clear is not None:
+                torch.cuda.empty_cache()
             # Re-validate
             status, metrics = validate_denoising(
                 cube_s3, cube_work, waves, good_mask, sname)
@@ -848,9 +1153,9 @@ def run_ml_denoising(data_dir=DATA_DIR,
 
         if status == 'FAIL':
             print("  ⚠️  Validation FAILED — reverting to physics output")
-            cube_out = cube_s3.astype(np.float32)
+            cube_out = np.asarray(cube_s3, dtype=np.float32)
         else:
-            cube_out = cube_work.astype(np.float32)
+            cube_out = np.asarray(cube_work, dtype=np.float32)
             
         elapsed_time = time.time() - start_time
         if torch.backends.mps.is_available():
@@ -880,4 +1185,20 @@ def run_ml_denoising(data_dir=DATA_DIR,
 
 
 if __name__ == '__main__':
-    run_ml_denoising()
+    import argparse
+    parser = argparse.ArgumentParser(description="Stage 4 ML denoise")
+    parser.add_argument("--data-dir", type=str, default=None)
+    parser.add_argument("--mode", type=str, choices=("full", "adapt"), default=None)
+    parser.add_argument("--prior-dir", type=str, default=None)
+    args = parser.parse_args()
+    kwargs = {}
+    if args.data_dir:
+        kwargs["data_dir"] = args.data_dir
+        kwargs["physics_dir"] = os.path.join(args.data_dir, "physics_output")
+        kwargs["noise_dir"] = os.path.join(args.data_dir, "noise_output")
+        kwargs["output_dir"] = os.path.join(args.data_dir, "ml_output")
+    if args.mode:
+        kwargs["mode"] = args.mode
+    if args.prior_dir:
+        kwargs["prior_dir"] = args.prior_dir
+    run_ml_denoising(**kwargs)

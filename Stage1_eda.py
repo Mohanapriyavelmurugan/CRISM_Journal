@@ -198,13 +198,14 @@ def run_eda(data_dir=DATA_DIR, output_dir=OUTPUT_DIR):
             continue
 
         H, W, B = cube.shape
-        waves   = get_sensor_waves(B, meta.get('wavelengths'))
+        waves   = get_sensor_waves(B, meta.get('wavelengths'), data_dir=data_dir)
         bad_mask = build_bad_mask(waves)
 
         print(f"  Cube: {H} × {W} × {B}  |  "
               f"Sensor: {'L' if B > 200 else 'S'}  |  "
               f"dtype: {cube.dtype}")
-        print(f"  Wavelength range: {waves[0]:.3f} – {waves[-1]:.3f} µm  "
+        print(f"  Wavelength range: {float(np.nanmin(waves)):.3f} – "
+              f"{float(np.nanmax(waves)):.3f} µm  "
               f"({'label' if meta.get('wavelengths') else 'empirical table'})")
 
         # I/F sanity
@@ -237,8 +238,9 @@ def run_eda(data_dir=DATA_DIR, output_dir=OUTPUT_DIR):
             'file_bytes':       os.path.getsize(img_path),
             'sensor':           meta.get('sensor_id', 'L' if B > 200 else 'S'),
             'wavelength_source': 'label' if meta.get('wavelengths') else 'empirical',
-            'wave_min':         float(waves[0]),
-            'wave_max':         float(waves[-1]),
+            # L-sensor axis is descending — store true spectral span, not index ends
+            'wave_min':         float(np.nanmin(waves)),
+            'wave_max':         float(np.nanmax(waves)),
             'if_min':           float(finite.min()) if finite.size else 0.0,
             'if_max':           float(finite.max()) if finite.size else 0.0,
             'bad_band_count':   int(bad_mask.sum()),
@@ -248,7 +250,8 @@ def run_eda(data_dir=DATA_DIR, output_dir=OUTPUT_DIR):
             'Sensor': 'L' if B > 200 else 'S',
             'Valid': len(clf['valid']), 'Dead': len(clf['dead']),
             'Noisy': len(clf['noisy']), 'LowSig': len(clf['low_signal']),
-            'Wave_min': f"{waves[0]:.3f}", 'Wave_max': f"{waves[-1]:.3f}",
+            'Wave_min': f"{float(np.nanmin(waves)):.3f}",
+            'Wave_max': f"{float(np.nanmax(waves)):.3f}",
             'IF_min': f"{all_results[sname]['if_min']:.4f}",
             'IF_max': f"{all_results[sname]['if_max']:.4f}",
             'Bytes': os.path.getsize(img_path),

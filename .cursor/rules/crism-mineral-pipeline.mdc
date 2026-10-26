@@ -1,0 +1,19 @@
+---
+description: CRISM mineral identification methodology and Stage5 agent constraints
+globs: Stage5_minerals.py,CRISM_MINERAL_IDENTIFICATION_GUIDE.md,**/mineral_output/**
+alwaysApply: false
+---
+
+# CRISM Mineral Pipeline Rules
+
+When editing or running mineral identification:
+
+- Treat `CRISM_MINERAL_IDENTIFICATION_GUIDE.md` as authoritative.
+- Keep a **single linear Stage 0–7 pipeline** in `Stage5_minerals.py`. Do not add baseline branches.
+- Never apply SRF convolution to `ASCIIdata_splib07b_cvCRISMjMTR3` (already CRISM-convolved).
+- Always subset library 489 channels to the scene L-sensor bands (~438).
+- SPM band depths must skip bad/dead bands (30 nm tolerance → NaN).
+- Abundance outputs must use **softmax** (non-negative, sum-to-one).
+- Process large cubes in blocks/batches; prefer CUDA AMP on 4 GB GPUs.
+- Expose and preserve `run_mineral_identification(data_dir, output_dir)` for `Run_pipeline.py`.
+- Prefer USGS ChapterM mineral names for labels; document rare detections via noise-pixel SAM and secondary abundances.

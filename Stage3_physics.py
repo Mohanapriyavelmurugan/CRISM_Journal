@@ -331,14 +331,19 @@ def run_physics_correction(data_dir=DATA_DIR,
             print(f"  ❌ {e}"); continue
 
         H, W, B = cube.shape
-        waves    = get_sensor_waves(B, meta.get('wavelengths'))
+        waves    = get_sensor_waves(
+            B, meta.get('wavelengths'), data_dir=data_dir, cube=cube
+        )
         bad_mask = build_bad_mask(waves)
         good_mask = ~bad_mask
+        print(f"  Wavelengths: {waves[0]:.3f}→{waves[-1]:.3f} µm | "
+              f"hard-bad bands={int(bad_mask.sum())}/{B}")
 
         dead = set(eda.get(sname, {}).get('dead_bands', []))
         noise = nm[sname]
 
-        # Mask sentinels + unphysical
+        # Mask sentinels + unphysical. Hard-bad bands only (keeps mineral
+        # diagnostics ~1.05 / 1.9 / 2.2 µm finite for Stage 4/5).
         cube = cube.astype(float)
         cube[(cube >= 65534) | (cube > IF_MAX) | (cube < IF_MIN)] = np.nan
         for d in dead:
